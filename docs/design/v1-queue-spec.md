@@ -375,11 +375,20 @@ on_complete(visit):
 
 ---
 
-## 5. Open questions blocking the build
+## 5. Open questions
 
-1. **Stack and hosting.** Not covered in the brief and I will not assume it.
-2. **Service list**, with durations and prices — including the kids-cut default.
-3. **Defaults to confirm:** remote cap (3), call grace (3 min), demotion places (2), removal after 2 no-shows, remote head grace (10 min), chair turnover (90s).
-4. **Barber auth** (§4-L).
-5. **One-queue-at-a-time policy** (§4-K).
-6. **Definition of "recovered walk-out revenue"** (§4-A).
+### Resolved 2026-08-29
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | Stack and hosting | **Next.js + Postgres on Vercel.** One codebase for kiosk, customer web and barber dashboard. Postgres is load-bearing here — the partial unique indexes in §1.7 are what enforce one-chair-one-client and one-active-visit-per-customer. |
+| 3 | Walk-out instrumentation | **Ships in v1.** `queue_impressions` and `services.price_cents` are in. The owner view in v1 stays minimal; the data starts accumulating immediately (§4-A). |
+| 6 | Remote-join integrity | **Device-token hardening in v1.** Remote joins bind to `customer_devices.token_hash`; one active visit per device; rate limits per device and IP; one-tap barber removal. Remote cap stays at 3 until real SMS verification ships in v1.1 (§4-F). |
+
+### Still open
+
+1. **Service list** — real names, durations and prices, including the kids-cut default (§4-I). I will seed `services` with `adult_cut` at 35 min and `kids_cut` at 45 min as placeholders and flag them in the code as unconfirmed; they need replacing before the shop uses this for real, or `barber_service_averages` starts from a wrong prior.
+2. **Definition of "recovered walk-out revenue"** (§4-A). Not blocking — v1 logs the raw impressions either way, and the metric is a query written later.
+3. **Defaults to confirm:** call grace 3 min · demote 2 places · remove after 2 no-shows · remote head grace 10 min · chair turnover 90s. All live in `shops` and are changeable without a deploy.
+4. **Barber auth** — phone + PIN unless you say otherwise (§4-L).
+5. **One active visit per customer per shop** — I am building it this way (§4-K); say if you want the hedge allowed.
