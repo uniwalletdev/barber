@@ -118,11 +118,12 @@ Primary key `(barber_id, customer_id)`. A barber sees their own history with a c
 | `status` | enum | `queued_remote` / `queued_present` / `called` / `in_progress` / `completed` / `left` / `no_show` / `closed_out` |
 | `join_method` | enum: `remote` / `walk_in` | |
 | `priority` | smallint, default 0 | Higher sorts earlier. **[seam]** — appointment elevation and cut-club priority. |
-| `sort_key` | numeric(20,6) | **[change]** — replaces a stored `queue_position`. See §4-B. |
+| `sort_key` | double precision | **[change]** — replaces a stored `queue_position`. See §4-B. Double rather than numeric so the value round-trips through JavaScript exactly; the gaps involved (1000, halved at most twice per visit) are orders of magnitude coarser than float64 error. |
 | `business_date` | date | Shop-local. Indexes the daily queue and all metrics. |
 | `joined_at` | timestamptz | |
 | `checked_in_at` | timestamptz, nullable | Physical arrival. Equals `joined_at` for walk-ins. |
 | `called_at`, `started_at`, `completed_at`, `ended_at` | timestamptz, nullable | |
+| `head_since_at` | timestamptz, nullable | Continuously at the head of an **idle** barber's queue since this time; cleared when either stops being true. This is how transition 7 measures "held the head for N seconds" — the grace only accrues while the hold actually costs someone. |
 | `no_show_count` | smallint, default 0 | Demotions **within this visit**. |
 | `outcome` | enum, nullable | `served` / `left` / `no_show` / `closed_out`. Null while active. |
 | `quoted_wait_seconds` | int, nullable | The estimate shown at join. Kept so the estimator can be graded against reality. |
@@ -231,7 +232,8 @@ callable(barber) = first v in queue(barber) where v.status = queued_present
 | 5 | `start` | `called` → `in_progress` | — | `started_at = now`; barber reads `with_client` |
 | 6 | `no_show` | `called` → `queued_present` | `now - called_at >= call_grace_seconds`, or the barber taps *No-show* | `no_show_count += 1`; `barber_customers.no_show_count += 1`; `demote(visit, 2)` |
 | 6b | `no_show` (limit) | `called` → `no_show` | as above **and** `no_show_count + 1 >= max_no_shows_per_visit` | terminal; `outcome = no_show` |
-| 7 | `no_arrival` **[change]** | `queued_remote` → `queued_remote` | this visit is `head(barber)`, barber is `available` with nobody called, and it has been head for `remote_head_grace_seconds` | `demote(visit, 2)`; on the 2nd demotion → `left`, `outcome = no_show` |
+| 7 | `no_arrival` **[change]** | `queued_remote` → `queued_remote` | this visit is `head(barber)` and the barber is `available` with nobody called | first sighting sets `head_since_at`; once `now - head_since_at >= remote_head_grace_seconds`, `demote(visit, 2)`; on the 2nd demotion → `left`, `outcome = no_show` |
+| 7b | `clear_head_timer` **[change]** | — | the visit stopped being head, or the barber stopped being idle | `head_since_at = null`, so grace cannot accrue across a barber's busy stretch |
 | 8 | `complete` | `in_progress` → `completed` | — | `completed_at`; update the running average (§3.4); upsert `barber_customers` |
 | 9 | `leave` | any of `queued_remote`, `queued_present`, `called` → `left` | — | customer taps *Leave*, or the barber removes them |
 | 10 | `abort` | `in_progress` → `left` | — | no average update — an aborted cut is not a timing sample |
