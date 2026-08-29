@@ -1,0 +1,6 @@
+[build]
+builder = "nix"
+
+[deploy]
+startCommand = "node scripts/migrate.mjs && next start"
+
