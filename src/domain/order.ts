@@ -7,8 +7,8 @@
  * tablet all write to the same queue.
  */
 
-import type { QueueEntry } from "./types.js";
-import { isQueued } from "./types.js";
+import type { QueueEntry } from "./types";
+import { isQueued } from "./types";
 
 /** Gap left when appending to the tail. Large enough to bisect into for years. */
 export const SORT_KEY_GAP = 1000;

@@ -6,13 +6,13 @@
  * flat per-head number.
  */
 
-import { orderQueue } from "./order.js";
+import { orderQueue } from "./order";
 import type {
   BarberSnapshot,
   QueueEntry,
   ServiceAverage,
   ShopPolicy,
-} from "./types.js";
+} from "./types";
 
 /**
  * Shown once a cut has run past its estimate. A hard zero would sit there

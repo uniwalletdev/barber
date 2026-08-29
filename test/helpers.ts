@@ -1,9 +1,22 @@
 import pg from "pg";
-import { migrate } from "../scripts/migrate.js";
-import type { QueueEntry, VisitStatus } from "../src/domain/types.js";
+import { migrate } from "../scripts/migrate";
+import type { QueueEntry, VisitStatus } from "../src/domain/types";
 
 export const DATABASE_URL =
-  process.env.DATABASE_URL ?? "postgres://barber:barber@127.0.0.1:5432/barber_test";
+  process.env.TEST_DATABASE_URL ??
+  process.env.DATABASE_URL ??
+  "postgres://barber:barber@127.0.0.1:5432/barber_test";
+
+// These tests truncate every table between cases. Refuse to run against a
+// database that is not obviously a scratch one, so a stray DATABASE_URL in the
+// environment cannot wipe the shop's real queue.
+const databaseName = DATABASE_URL.split("/").pop()?.split("?")[0] ?? "";
+if (!/test/i.test(databaseName) && process.env.ALLOW_DESTRUCTIVE_TESTS !== "1") {
+  throw new Error(
+    `Refusing to run destructive tests against database "${databaseName}". ` +
+      `Point TEST_DATABASE_URL at a scratch database, or set ALLOW_DESTRUCTIVE_TESTS=1 if you are certain.`,
+  );
+}
 
 let migrated = false;
 

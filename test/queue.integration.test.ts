@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type pg from "pg";
-import { QueueRepo } from "../src/db/queue-repo.js";
-import { reset, seedShop, testPool, type Fixture } from "./helpers.js";
+import { QueueRepo } from "../src/db/queue-repo";
+import { reset, seedShop, testPool, type Fixture } from "./helpers";
 
 const pool: pg.Pool = await testPool();
 const repo = new QueueRepo(pool);

@@ -4,3 +4,9 @@ node_modules/
 dist/
 .next/
 *.log
+next-env.d.ts
+.vercel
+test-results/
+*.tmp.mjs
+tsconfig.tsbuildinfo
+.next/

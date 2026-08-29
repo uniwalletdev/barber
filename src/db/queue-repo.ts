@@ -20,8 +20,8 @@ import {
   type Rejected,
   type SideEffect,
   type VisitPatch,
-} from "../domain/machine.js";
-import { callable, head, positionOf } from "../domain/order.js";
+} from "../domain/machine";
+import { callable, head, positionOf } from "../domain/order";
 import {
   serviceDuration,
   updateAverage,
@@ -29,15 +29,15 @@ import {
   waitToJoin,
   type ServiceTiming,
   type TimingLookup,
-} from "../domain/estimate.js";
+} from "../domain/estimate";
 import type {
   BarberSnapshot,
   JoinMethod,
   QueueEntry,
   ShopPolicy,
   VisitStatus,
-} from "../domain/types.js";
-import { ACTIVE_STATUSES } from "../domain/types.js";
+} from "../domain/types";
+import { ACTIVE_STATUSES } from "../domain/types";
 
 const ACTIVE = ACTIVE_STATUSES as readonly VisitStatus[];
 

@@ -38,6 +38,22 @@ export async function seed(connectionString: string): Promise<void> {
   try {
     const sql = await readFile(new URL("../db/seed/dev.sql", import.meta.url).pathname, "utf8");
     await client.query(sql);
+
+    // Development PINs. Hashing needs Node, so it cannot live in the SQL file.
+    // Only ever applied to barbers that have no PIN set.
+    const { hashPin } = await import("../src/domain/pin");
+    const { rows } = await client.query<{ id: string }>(
+      "select id from barbers where pin_hash is null",
+    );
+    for (const row of rows) {
+      await client.query("update barbers set pin_hash = $2 where id = $1", [
+        row.id,
+        await hashPin("1234"),
+      ]);
+    }
+    if (rows.length > 0) {
+      console.log(`Set the development PIN 1234 on ${rows.length} barber(s). Change it before real use.`);
+    }
   } finally {
     await client.end();
   }
@@ -50,7 +66,22 @@ if (isEntrypoint) {
     console.error("DATABASE_URL is not set. Copy .env.example to .env.");
     process.exit(1);
   }
-  const applied = await migrate(url);
+  let applied: string[];
+  try {
+    applied = await migrate(url);
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "ECONNREFUSED" || code === "ENOTFOUND" || code === "ETIMEDOUT") {
+      console.error(
+        `Cannot reach the database at ${url.replace(/:[^:@/]*@/, ":***@")}\n` +
+          "  - On Vercel: check DATABASE_URL is set for this environment and uses the\n" +
+          "    Railway public connection string, not the internal one.\n" +
+          "  - Locally: is Postgres running?",
+      );
+      process.exit(1);
+    }
+    throw error;
+  }
   console.log(applied.length ? `Applied: ${applied.join(", ")}` : "Already up to date.");
   if (process.argv.includes("--seed")) {
     await seed(url);

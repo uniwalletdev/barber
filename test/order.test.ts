@@ -7,8 +7,8 @@ import {
   positionOf,
   renormalizeSortKeys,
   tailSortKey,
-} from "../src/domain/order.js";
-import { entry } from "./helpers.js";
+} from "../src/domain/order";
+import { entry } from "./helpers";
 
 const line = () => [
   entry({ id: "a", sortKey: 1000 }),

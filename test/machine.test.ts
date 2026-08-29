@@ -6,9 +6,9 @@ import {
   staleHeadTimers,
   transition,
   type MachineContext,
-} from "../src/domain/machine.js";
-import { DEFAULT_POLICY, type BarberSnapshot, type QueueEntry } from "../src/domain/types.js";
-import { entry } from "./helpers.js";
+} from "../src/domain/machine";
+import { DEFAULT_POLICY, type BarberSnapshot, type QueueEntry } from "../src/domain/types";
+import { entry } from "./helpers";
 
 const NOW = new Date("2026-08-29T14:00:00Z");
 const available: BarberSnapshot = {

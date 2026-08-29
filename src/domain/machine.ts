@@ -14,7 +14,7 @@ import {
   head,
   orderQueue,
   tailSortKey,
-} from "./order.js";
+} from "./order";
 import type {
   BarberSnapshot,
   JoinMethod,
@@ -22,8 +22,8 @@ import type {
   ShopPolicy,
   VisitOutcome,
   VisitStatus,
-} from "./types.js";
-import { isActive, isQueued } from "./types.js";
+} from "./types";
+import { isActive, isQueued } from "./types";
 
 export type QueueEventType =
   | "check_in"
