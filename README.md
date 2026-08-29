@@ -61,36 +61,58 @@ npm run typecheck
 
 ## Deploying
 
-**Postgres on Railway.** Create a Postgres service and copy its *public*
-connection string (`postgresql://...@<host>.proxy.rlwy.net:<port>/railway`).
-The internal `.railway.internal` host is only reachable from inside Railway, so
-Vercel cannot use it. Nothing in this repo deploys *to* Railway — it is the
-database only.
+This repo runs on either platform. Postgres lives on Railway in both cases.
 
-**App on Vercel.** Import the repo and set these environment variables for
-Production and Preview:
+**Migrations run at start, not at build.** `npm run build` is `next build` and
+needs no database — a build must not fail because a database is briefly
+unreachable, and a preview deploy must never silently migrate production.
+`npm start` runs `node scripts/migrate.mjs && next start`, so any platform with
+a start command brings its own schema up to date on deploy. The runner is plain
+JavaScript on purpose: platforms install with `--omit=dev`, so `tsx` is not
+there to run a TypeScript one.
+
+### Railway (app + Postgres)
+
+Add a Postgres service, then on the app service set:
 
 | Variable | Value |
 |---|---|
-| `DATABASE_URL` | The Railway public connection string. |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` — reference the service, do not paste a URL |
 | `SESSION_SECRET` | `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"` |
-| `CRON_SECRET` | Any long random string; the sweep route checks it. |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk dashboard → API keys. |
-| `CLERK_SECRET_KEY` | Clerk dashboard → API keys. Never expose this to the client. |
-| `SHOP_ID` | Optional. Defaults to the oldest shop row. |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` | Clerk dashboard → API keys |
 
-**Migrations are a deliberate step, not part of the build.** `npm run build` is
-`next build` and needs no database — a build must never fail because a database
-is briefly unreachable, and a preview deploy must never silently migrate
-production. Run migrations yourself against whichever database you mean:
+Deploy. The start command migrates the database itself. Then seed the shop once:
+
+```bash
+DATABASE_URL="<railway public url>" npm run seed
+```
+
+### Vercel (app) + Railway (Postgres)
+
+Vercel is serverless and has **no start command**, so nothing migrates for you.
+Run migrations yourself against the Railway database, once per schema change:
 
 ```bash
 DATABASE_URL="<railway public url>" npm run migrate
-DATABASE_URL="<railway public url>" npm run seed    # first time only
+DATABASE_URL="<railway public url>" npm run seed     # first time only
 ```
 
-The seed adds the placeholder services and the PIN `1234`. Both are fine for a
-first look and must not survive contact with real customers.
+Environment variables are the same as above, except `DATABASE_URL` must be
+Railway's **public** connection string (`...proxy.rlwy.net`). The
+`.railway.internal` host only resolves inside Railway.
+
+**Framework preset.** If the Vercel project was created before this repo had a
+framework, its preset is stuck on "Other" and the build ends with *No Output
+Directory named "public" found*. `vercel.json` now pins `"framework": "nextjs"`;
+if the error persists, clear the Output Directory override in Project Settings →
+Build & Development Settings.
+
+### When something is missing
+
+The app does not crash on a half-configured deployment. A missing
+`DATABASE_URL`, an unreachable database, an un-migrated schema or an empty shop
+each render a page naming the exact command to fix it, rather than a stack
+trace.
 
 ### Keeping the queue moving
 

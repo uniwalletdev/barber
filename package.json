@@ -8,9 +8,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "migrate": "tsx scripts/migrate.ts",
-    "seed": "tsx scripts/migrate.ts --seed",
+    "start": "node scripts/migrate.mjs && next start",
+    "migrate": "node scripts/migrate.mjs",
+    "seed": "node scripts/migrate.mjs --seed",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
@@ -29,7 +29,6 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
-    "playwright": "^1.62.1",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"

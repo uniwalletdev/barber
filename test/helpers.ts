@@ -1,5 +1,5 @@
 import pg from "pg";
-import { migrate } from "../scripts/migrate";
+import { migrate } from "../scripts/migrate.mjs";
 import type { QueueEntry, VisitStatus } from "../src/domain/types";
 
 export const DATABASE_URL =

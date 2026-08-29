@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { currentShopId } from "@/src/server/db";
+import { currentShopId, databaseStatus } from "@/src/server/db";
 import { shopOverview } from "@/src/server/queries";
 import { formatWait } from "@/src/domain/estimate";
 import AutoRefresh from "./_components/AutoRefresh";
 import RecordImpression from "./_components/RecordImpression";
 import { initials, statusLabel } from "./_components/format";
+
+import NeedsDatabase from "@/app/_components/NeedsDatabase";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,9 @@ export default async function ShopPage({
   searchParams: Promise<{ kiosk?: string }>;
 }) {
   const { kiosk } = await searchParams;
+  const status = await databaseStatus();
+  if (status !== "ready") return <NeedsDatabase status={status} />;
+
   const shopId = await currentShopId();
   const { shop, barbers } = await shopOverview(shopId);
 

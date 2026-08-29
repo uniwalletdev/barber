@@ -47,3 +47,27 @@ export async function currentShopId(): Promise<string> {
   if (!id) throw new Error("No shop exists yet. Run `npm run seed`.");
   return id;
 }
+
+export type DatabaseStatus = "ready" | "no_url" | "unreachable" | "no_schema" | "no_shop";
+
+/**
+ * Why the app cannot serve, in terms an operator can act on.
+ *
+ * A platform that runs a start command migrates itself (see package.json), but
+ * a serverless deploy has no start step — so an un-migrated database has to
+ * produce a usable message rather than `relation "shops" does not exist`.
+ */
+export async function databaseStatus(): Promise<DatabaseStatus> {
+  if (!process.env.DATABASE_URL) return "no_url";
+  try {
+    const { rows } = await getPool().query<{ id: string }>(
+      `select id from shops order by created_at limit 1`,
+    );
+    return rows[0] ? "ready" : "no_shop";
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "42P01") return "no_schema"; // undefined_table
+    if (["ECONNREFUSED", "ENOTFOUND", "ETIMEDOUT"].includes(code ?? "")) return "unreachable";
+    throw error;
+  }
+}

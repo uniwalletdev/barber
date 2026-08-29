@@ -5,12 +5,18 @@ import { money } from "@/app/_components/format";
 import AutoRefresh from "@/app/_components/AutoRefresh";
 
 import NotConfigured from "@/app/_components/NotConfigured";
+import NeedsDatabase from "@/app/_components/NeedsDatabase";
 import { clerkConfigured } from "@/src/server/clerk-config";
+
+import { databaseStatus } from "@/src/server/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   if (!clerkConfigured) return <NotConfigured />;
+
+  const status = await databaseStatus();
+  if (status !== "ready") return <NeedsDatabase status={status} />;
 
   // Shop revenue and customer counts. Owner only.
   const owner = await requireOwner();
