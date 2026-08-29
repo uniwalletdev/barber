@@ -1,4 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
+import { clerkConfigured } from "@/src/server/clerk-config";
+import StaffBar from "./_components/StaffBar";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,9 +17,20 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Clerk wraps the whole app so the staff bar works on every page, but only
+  // when it is actually configured — see src/server/clerk-config.ts.
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {clerkConfigured ? (
+          <ClerkProvider>
+            <StaffBar />
+            {children}
+          </ClerkProvider>
+        ) : (
+          children
+        )}
+      </body>
     </html>
   );
 }

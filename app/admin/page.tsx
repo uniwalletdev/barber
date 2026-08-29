@@ -1,20 +1,32 @@
-import { currentShopId } from "@/src/server/db";
+import Link from "next/link";
 import { ownerMetrics } from "@/src/server/metrics";
+import { requireOwner } from "@/src/server/staff";
 import { money } from "@/app/_components/format";
 import AutoRefresh from "@/app/_components/AutoRefresh";
+
+import NotConfigured from "@/app/_components/NotConfigured";
+import { clerkConfigured } from "@/src/server/clerk-config";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const shopId = await currentShopId();
-  const m = await ownerMetrics(shopId);
+  if (!clerkConfigured) return <NotConfigured />;
+
+  // Shop revenue and customer counts. Owner only.
+  const owner = await requireOwner();
+  const m = await ownerMetrics(owner.shopId);
   const conversionRate =
     m.impressionsToday > 0 ? Math.round((m.conversionsToday / m.impressionsToday) * 100) : null;
 
   return (
     <main className="wrap wrap-wide">
       <AutoRefresh intervalMs={60_000} />
-      <h1>Shop today</h1>
+      <div className="masthead">
+        <h1>Shop today</h1>
+        <Link href="/admin/staff" className="btn-quiet">
+          Staff access →
+        </Link>
+      </div>
       <p className="lede">
         Shop-wide totals only. Per-barber and per-customer detail belongs to the barber.
       </p>

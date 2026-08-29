@@ -53,7 +53,7 @@ Every other table carries `shop_id`, even in v1.
 | `name` | text | |
 | `profile_image_url` | text, nullable | UI falls back to an initials avatar. |
 | `phone_number` | text, unique | Login identity. **[change]** — auth was unspecified; see §4-L. |
-| `pin_hash` | text, nullable | |
+| *(auth)* | — | Staff sign in through Clerk; `staff.clerk_user_id` maps a Clerk identity to this barber. See §4-L. |
 | `presence` | enum: `available` / `on_break` / `off` | **[change]** — `with_client` removed; it is derived. See §4-C. |
 | `break_until` | timestamptz, nullable | Drives the public "back at ~2:40" badge. |
 | `accepting_remote_joins` | bool, default true | Lets a barber close remote joins without going on break. |
@@ -369,7 +369,7 @@ on_complete(visit):
 
 **K. One active visit per customer per shop.** Not addressed in the brief. Without it, one person holds spots with three barbers, takes the first to open, and every barber's estimate is inflated by demand that does not exist. Enforced with a partial unique index. **Confirm you want this.**
 
-**L. Barber authentication is unspecified.** Phone + PIN is the lowest-friction fit for a shop where barbers may not share an email convention. Needs your call.
+**L. Barber authentication is unspecified.** *Resolved: Clerk, staff only.* Barbers and the owner authenticate through Clerk; a `staff` table maps a Clerk identity to a chair, and every barber action re-derives the chair from the session rather than trusting a client-supplied id. Customers stay password-free, which the brief requires and which the walk-out problem depends on. This also closed a real hole — `/admin`, showing shop revenue, had no authentication at all.
 
 **M. Shop timezone and business day are missing.** Every metric, the daily queue reset, and end-of-day close-out need them.
 
@@ -392,5 +392,4 @@ on_complete(visit):
 1. **Service list** — real names, durations and prices, including the kids-cut default (§4-I). I will seed `services` with `adult_cut` at 35 min and `kids_cut` at 45 min as placeholders and flag them in the code as unconfirmed; they need replacing before the shop uses this for real, or `barber_service_averages` starts from a wrong prior.
 2. **Definition of "recovered walk-out revenue"** (§4-A). Not blocking — v1 logs the raw impressions either way, and the metric is a query written later.
 3. **Defaults to confirm:** call grace 3 min · demote 2 places · remove after 2 no-shows · remote head grace 10 min · chair turnover 90s. All live in `shops` and are changeable without a deploy.
-4. **Barber auth** — phone + PIN unless you say otherwise (§4-L).
-5. **One active visit per customer per shop** — I am building it this way (§4-K); say if you want the hedge allowed.
+4. **One active visit per customer per shop** — I am building it this way (§4-K); say if you want the hedge allowed.

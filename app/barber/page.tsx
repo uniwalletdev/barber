@@ -1,12 +1,12 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { currentBarberId } from "@/src/server/session";
+import { currentStaff } from "@/src/server/staff";
 import { dashboard } from "@/src/server/queries";
 import { formatWait } from "@/src/domain/estimate";
 import AutoRefresh from "@/app/_components/AutoRefresh";
 import ActionButton from "@/app/_components/ActionButton";
 import { statusLabel } from "@/app/_components/format";
 import {
-  barberLogout,
   callNext,
   completeVisit,
   endBreak,
@@ -18,6 +18,9 @@ import {
   startVisit,
 } from "@/src/server/actions";
 
+import NotConfigured from "@/app/_components/NotConfigured";
+import { clerkConfigured } from "@/src/server/clerk-config";
+
 export const dynamic = "force-dynamic";
 
 function elapsed(since: Date | null): string {
@@ -27,10 +30,17 @@ function elapsed(since: Date | null): string {
 }
 
 export default async function BarberDashboard() {
-  const barberId = await currentBarberId();
-  if (!barberId) redirect("/barber/login");
-  const data = await dashboard(barberId);
-  if (!data) redirect("/barber/login");
+  if (!clerkConfigured) return <NotConfigured />;
+
+  const staff = await currentStaff();
+
+  // Signed in with Clerk, but nobody has linked this account to a chair yet.
+  if (!staff) return <NotLinked />;
+  if (staff.role === "owner" && !staff.barberId) redirect("/admin");
+  if (!staff.barberId) return <NotLinked />;
+
+  const data = await dashboard(staff.barberId);
+  if (!data) return <NotLinked />;
 
   const { barber, inChair, called, nextUp, callableId, queue } = data;
   const onBreak = barber.presence === "on_break";
@@ -50,11 +60,6 @@ export default async function BarberDashboard() {
             )}
           </p>
         </div>
-        <form action={barberLogout}>
-          <button type="submit" className="btn-quiet">
-            Sign out
-          </button>
-        </form>
       </div>
 
       <div className="stat-row" style={{ marginTop: 18 }}>
@@ -236,6 +241,32 @@ export default async function BarberDashboard() {
           <ActionButton action={setRemoteJoins.bind(null, !barber.acceptingRemoteJoins)}>
             {barber.acceptingRemoteJoins ? "Pause remote joins" : "Allow remote joins"}
           </ActionButton>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+/**
+ * A signed-in staff member with no chair yet. The owner links them from
+ * /admin/staff; until then there is nothing they can act on.
+ */
+function NotLinked() {
+  return (
+    <main className="wrap" style={{ maxWidth: 520 }}>
+      <h1>Almost there</h1>
+      <p className="lede">
+        You&apos;re signed in, but your account isn&apos;t linked to a chair yet.
+      </p>
+      <div className="card">
+        <p style={{ margin: 0 }}>
+          Ask the shop owner to link you from the shop settings. They&apos;ll see your
+          account waiting there.
+        </p>
+        <div className="btn-row" style={{ marginTop: 16 }}>
+          <Link href="/" className="btn">
+            Back to the shop
+          </Link>
         </div>
       </div>
     </main>

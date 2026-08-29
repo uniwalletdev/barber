@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "tsx scripts/migrate.ts && next build",
+    "build": "next build",
     "start": "next start",
     "migrate": "tsx scripts/migrate.ts",
     "seed": "tsx scripts/migrate.ts --seed",
@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.8.3",
     "dotenv": "^17.4.2",
     "next": "^16.3.3",
     "pg": "^8.23.0",

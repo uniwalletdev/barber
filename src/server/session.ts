@@ -3,12 +3,13 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { getPool } from "./db";
 
-export { hashPin, verifyPin } from "../domain/pin";
-
-const BARBER_COOKIE = "barber_session";
 const DEVICE_COOKIE = "device_token";
 const YEAR = 60 * 60 * 24 * 365;
 
+/**
+ * Customer-side identity only. Staff authentication is Clerk's job; customers
+ * deliberately have no account, so the device is what identity they have.
+ */
 function secret(): string {
   const value = process.env.SESSION_SECRET;
   if (value) return value;
@@ -32,31 +33,6 @@ function unsign(signed: string | undefined): string | null {
   if (given.length !== expected.length) return null;
   return timingSafeEqual(Buffer.from(given), Buffer.from(expected)) ? value : null;
 }
-
-// -------------------------------------------------------------- barbers ---
-
-export async function startBarberSession(barberId: string): Promise<void> {
-  const jar = await cookies();
-  jar.set(BARBER_COOKIE, sign(barberId), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 12, // a shift, not a year
-  });
-}
-
-export async function endBarberSession(): Promise<void> {
-  (await cookies()).delete(BARBER_COOKIE);
-}
-
-/** The signed-in barber, or null. Never trust a barber id from the client. */
-export async function currentBarberId(): Promise<string | null> {
-  const jar = await cookies();
-  return unsign(jar.get(BARBER_COOKIE)?.value);
-}
-
-// -------------------------------------------------------------- devices ---
 
 /**
  * With no password and no SMS verification, the device is the credential. The
@@ -89,14 +65,12 @@ export function tokenHash(token: string): string {
 
 /** Finds or creates the customer_devices row for this browser. */
 export async function deviceRowId(customerId: string, token: string): Promise<string> {
-  const pool = getPool();
-  const hash = tokenHash(token);
-  const { rows } = await pool.query<{ id: string }>(
+  const { rows } = await getPool().query<{ id: string }>(
     `insert into customer_devices (customer_id, token_hash)
      values ($1, $2)
      on conflict (token_hash) do update set last_used_at = now()
      returning id`,
-    [customerId, hash],
+    [customerId, tokenHash(token)],
   );
   return rows[0]!.id;
 }

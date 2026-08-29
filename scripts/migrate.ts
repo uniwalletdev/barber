@@ -39,21 +39,6 @@ export async function seed(connectionString: string): Promise<void> {
     const sql = await readFile(new URL("../db/seed/dev.sql", import.meta.url).pathname, "utf8");
     await client.query(sql);
 
-    // Development PINs. Hashing needs Node, so it cannot live in the SQL file.
-    // Only ever applied to barbers that have no PIN set.
-    const { hashPin } = await import("../src/domain/pin");
-    const { rows } = await client.query<{ id: string }>(
-      "select id from barbers where pin_hash is null",
-    );
-    for (const row of rows) {
-      await client.query("update barbers set pin_hash = $2 where id = $1", [
-        row.id,
-        await hashPin("1234"),
-      ]);
-    }
-    if (rows.length > 0) {
-      console.log(`Set the development PIN 1234 on ${rows.length} barber(s). Change it before real use.`);
-    }
   } finally {
     await client.end();
   }

@@ -3,15 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getPool, getRepo, currentShopId } from "./db";
-import {
-  currentBarberId,
-  deviceRowId,
-  deviceToken,
-  tokenHash,
-  endBarberSession,
-  startBarberSession,
-} from "./session";
-import { verifyPin } from "../domain/pin";
+import { deviceRowId, deviceToken, tokenHash } from "./session";
+import { currentStaff, requireBarberId, shopHasOwner } from "./staff";
 import type { QueueEvent } from "../domain/machine";
 
 export interface ActionState {
@@ -109,36 +102,14 @@ export async function leaveQueue(visitId: string): Promise<ActionState> {
 
 // --------------------------------------------------------------- barbers ---
 
-export async function barberLogin(_prev: ActionState, form: FormData): Promise<ActionState> {
-  const phone = normalizePhone(String(form.get("phone") ?? ""));
-  const pin = String(form.get("pin") ?? "");
-  if (!phone || !pin) return { error: "Enter your phone number and PIN." };
-
-  const { rows } = await getPool().query<{ id: string; pin_hash: string | null }>(
-    `select id, pin_hash from barbers where phone_number = $1 and active`,
-    [phone],
-  );
-  const barber = rows[0];
-  // One message for both cases: a wrong PIN and an unknown number should not be
-  // distinguishable from outside.
-  if (!barber || !(await verifyPin(pin, barber.pin_hash))) {
-    return { error: "That phone number and PIN do not match." };
-  }
-  await startBarberSession(barber.id);
-  redirect("/barber");
-}
-
-export async function barberLogout(): Promise<void> {
-  await endBarberSession();
-  redirect("/barber/login");
-}
-
-/** Every barber action re-derives the barber from the session cookie. */
+/** Every barber action re-derives the barber from the Clerk session. */
 async function actAsBarber(
   run: (barberId: string) => Promise<{ ok: boolean; message?: string }>,
 ): Promise<ActionState> {
-  const barberId = await currentBarberId();
-  if (!barberId) return { error: "Your session has expired. Sign in again." };
+  const barberId = await requireBarberId();
+  if (!barberId) {
+    return { error: "Your account is not linked to a chair. Ask the shop owner." };
+  }
   const result = await run(barberId);
   revalidatePath("/barber");
   return result.ok ? {} : { error: result.message ?? "That did not work." };
