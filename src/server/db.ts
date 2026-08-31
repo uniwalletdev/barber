@@ -17,8 +17,18 @@ function sslFor(connectionString: string): pg.PoolConfig["ssl"] {
 // a new set of connections on every edit.
 const globalForDb = globalThis as unknown as { __pool?: pg.Pool };
 
+/**
+ * Railway exposes both an internal URL (DATABASE_URL) and a proxied one
+ * (DATABASE_PUBLIC_URL). Accept either, so referencing the wrong one is not a
+ * silent outage. Prefer the internal URL when both are set: it is faster and
+ * does not bill egress.
+ */
+export function connectionString(): string | undefined {
+  return process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL;
+}
+
 export function getPool(): pg.Pool {
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString = process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL;
   if (!connectionString) {
     throw new Error(
       "DATABASE_URL is not set. On Vercel add it under Project Settings > Environment Variables, pointing at the Railway database.",
@@ -58,7 +68,7 @@ export type DatabaseStatus = "ready" | "no_url" | "unreachable" | "no_schema" | 
  * produce a usable message rather than `relation "shops" does not exist`.
  */
 export async function databaseStatus(): Promise<DatabaseStatus> {
-  if (!process.env.DATABASE_URL) return "no_url";
+  if (!connectionString()) return "no_url";
   try {
     const { rows } = await getPool().query<{ id: string }>(
       `select id from shops order by created_at limit 1`,

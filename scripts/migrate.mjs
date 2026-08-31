@@ -65,7 +65,8 @@ export async function seed(connectionString) {
 
 const isEntrypoint = process.argv[1]?.endsWith("migrate.mjs");
 if (isEntrypoint) {
-  const url = process.env.DATABASE_URL;
+  // Either of Railway's two names; internal wins when both are present.
+  const url = process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL;
   if (!url) {
     console.error(
       "DATABASE_URL is not set, so there is no database to migrate.\n" +
